@@ -1,7 +1,7 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Set page structure and wide viewport layout
 st.set_page_config(page_title="Live AI Market Engine", page_icon="⚡", layout="wide")
@@ -58,22 +58,14 @@ def live_trading_dashboard():
             # Drop empty columns and sort chronology
             df = df.dropna()
             
-            # Clean indices structural layout
-            latest_row = df.iloc[-1]
-            previous_row = df.iloc[-2] if len(df) > 1 else latest_row
+            # Extract clean float variables directly from the last rows safely
+            live_close = float(df['Close'].iloc[-1])
+            live_open = float(df['Open'].iloc[-1])
+            live_high = float(df['High'].iloc[-1])
+            live_low = float(df['Low'].iloc[-1])
             
-            # Extract clean float variables
-            def clean_val(col_name, row):
-                val = row[col_name]
-                return float(val.iloc[0]) if isinstance(val, (pd.Series, pydantic_core.core_schema.PandasSeries)) or hasattr(val, 'iloc') else float(val)
-
-            live_close = clean_val('Close', latest_row)
-            live_open = clean_val('Open', latest_row)
-            live_high = clean_val('High', latest_row)
-            live_low = clean_val('Low', latest_row)
-            prev_close = clean_val('Close', previous_row)
-            
-            # Calculate price shifts for formatting metrics
+            # Get previous candle close price to find delta direction
+            prev_close = float(df['Close'].iloc[-2]) if len(df) > 1 else live_close
             price_delta = live_close - prev_close
             
             # Display Real-Time Price Cards
@@ -105,16 +97,16 @@ def live_trading_dashboard():
                 st.warning(f"🟡 **SIGNAL: NEUTRAL / STANDBY**\n\nConflicting momentum markers on the `{timeframe}` charts. Market is consolidating. Wait for structural breakout.")
             
             # ==========================================
-            # 4. CANDLESTICK GRAPH REPRESENTATION
+            # 4. STRUCTURAL CHART REPRESENTATION
             # ==========================================
             st.markdown("---")
-            st.subheader(f"📊 Real Market Structural Candlestick Chart ({timeframe})")
+            st.subheader(f"📊 Real Market Trend Line Chart ({timeframe})")
             
-            # Format dataframe specifically for native Streamlit charting
-            chart_data = df.tail(30).copy() # View last 30 intervals for crisp mobile styling
+            # Format dataframe specifically for native Streamlit charting (last 30 intervals)
+            chart_data = df.tail(30).copy()
             
-            # Display clean high-performance area metric charts natively
-            st.area_chart(chart_data['Close'], usage="line", color="#00ffcc" if live_close > live_open else "#ff3366")
+            # Render a high-performance chart that turns green for up trends and red for down trends
+            st.area_chart(chart_data['Close'], color="#00ffcc" if live_close > live_open else "#ff3366")
             
             # Provide clean tabular overview data spreadsheet below
             with st.expander("👁️ View Live Raw Feed Spreadsheet Ledger"):
